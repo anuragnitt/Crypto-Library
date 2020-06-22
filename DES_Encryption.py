@@ -179,10 +179,10 @@ def round_keys(key_bits) :
 	return round_key_set # returns the list of 16 round_keys
 	
 text = input('Text to encrypt : ')
-
+print('\nEncryption key should be 8 characters(any) long')
 while True :
 
-	key = input('\nEncryption Key : ')
+	key = input('Encryption Key : ')
 	if len(key) == 8 :
 		break
 	else :
