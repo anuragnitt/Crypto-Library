@@ -2,7 +2,7 @@ import math
 
 # conversion of plain text to binary value using utf-8 encoding
 def str_to_bin(text) :
-
+	
 	b = [format(x, 'b') for x in bytearray(text, encoding = 'utf-8')]
 	for i in range(len(b)) :
 		if len(b[i]) < 8 : # making each byte representation of 8 digits
