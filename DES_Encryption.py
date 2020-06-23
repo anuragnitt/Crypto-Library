@@ -1,9 +1,9 @@
 import math
 
 # conversion of plain text to binary value using utf-8 encoding
-def str_to_bin(text) :
-	
-	b = [format(x, 'b') for x in bytearray(text, encoding = 'utf-8')]
+def str2bin(text) :
+
+	b = [format(x, 'b') for x in bytearray(text, encoding = 'ascii')]
 	for i in range(len(b)) :
 		if len(b[i]) < 8 : # making each byte representation of 8 digits
 			for x in range(8 - len(b[i])) :
@@ -11,10 +11,14 @@ def str_to_bin(text) :
 				
 	return ''.join(b) # join all list elements into a string
 
-# padding the binary value according to PKCS5-Padding Rule
-def pkcs5_padding(text, bin_bits) :
+def bin2str(bin_bits) :
+	
+	return ''.join([chr(int(bin_bits[i:i+8], 2)) for i in range(0, len(bin_bits), 8)])
 
-	pad_bytes = 8 - len(text)%8
+# padding the binary value according to PKCS5-Padding Rule
+def pkcs5_padding(bin_bits) :
+
+	pad_bytes = 8 - (len(bin_bits)//8)%8
 	pad_value = bin(pad_bytes)[2:]
 	
 	if len(pad_value) < 8 :
@@ -156,9 +160,6 @@ def final_perm(bin_bits) :
 		perm += bin_bits[i-1]
 		
 	return perm
-
-# number of left shifts to be done in each encryption round
-left_shift_table = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
 	
 def round_keys(key_bits) :
 	
@@ -168,6 +169,9 @@ def round_keys(key_bits) :
 	
 	left_key = new_key_bits[:28] # break key in two halves
 	right_key = new_key_bits[28:]
+
+	# number of left shifts to be done in each encryption round
+	left_shift_table = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
 	
 	for i in range(16) :
 		left_key = left_shift(left_key, left_shift_table[i]) # left_shift both the halves
@@ -180,12 +184,80 @@ def round_keys(key_bits) :
 	
 	return round_key_set # returns the list of 16 round_keys
 	
+def bin2hex(binary) :
+	
+	table = {'0000':'0', '0001':'1', '0010':'2', '0011':'3', '0100':'4', '0101':'5', '0110':'6', '0111':'7',
+	         '1000':'8', '1001':'9', '1010':'A', '1011':'B', '1100':'C', '1101':'D', '1110':'E', '1111':'F'}
+
+	hex_bits = ''
+	for i in range(len(binary)//4) :
+		hex_bits += table[binary[i*4 : (i*4)+4]]
+		
+	return hex_bits
+
+def bin2base64(binary) : # byte is an octet of binary & a sextet of base64
+
+	pad_val = 3 - (len(binary)//8)%3 # len(binary)//8 gives the bytes in the equivalent text.
+				        # the equivalent text length should be divisible by 3, if not, then pad it.
+
+	table = {0:'A', 1:'B', 2:'C', 3:'D', 4:'E', 5:'F', 6:'G', 7:'H', 8:'I', 9:'J', 10:'K', 11:'L', 12:'M', 13:'N', 14:'O', 15:'P',
+	         16:'Q', 17:'R', 18:'S', 19:'T', 20:'U', 21:'V', 22:'W', 23:'X', 24:'Y', 25:'Z', 26:'a', 27:'b', 28:'c', 29:'d', 30:'e', 31:'f',
+	         32:'g', 33:'h', 34:'i', 35:'j', 36:'k', 37:'l', 38:'m', 39:'n', 40:'o', 41:'p', 42:'q', 43:'r', 44:'s', 45:'t', 46:'u', 47:'v',
+	         48:'w', 49:'x', 50:'y', 51:'z', 52:'0', 53:'1', 54:'2', 55:'3', 56:'4', 57:'5', 58:'6', 59:'7', 60:'8', 61:'9', 62:'+', 63:'/'}
+
+	if (6 - len(binary)%6) != 6 : # make the sextet complete by adding required no. of '0's
+		for i in range(6 - len(binary)%6) :
+			binary += '0'
+
+	base64 = ''
+
+	for i in range(len(binary)//6) :
+		decimal_val = 0
+		bits = [int(x) for x in binary[i*6 : (i*6)+6]]
+		for x in range(len(bits)) :
+			decimal_val += int(bits[x]*math.pow(2, len(bits)-1-x))
+		
+		base64 += table[decimal_val]
+
+	if pad_val != 3 : # finally pad the base64 with '='s
+		for i in range(pad_val) :
+			base64 += '='
+
+	return base64
+
+def base642bin(cipher) :
+
+	cipher = cipher.strip('=') # remove all the trailing '='
+
+	table = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4, 'F':5, 'G':6, 'H':7, 'I':8, 'J':9, 'K':10, 'L':11, 'M':12, 'N':13, 'O':14, 'P':15,
+	'Q':16, 'R':17, 'S':18, 'T':19, 'U':20, 'V':21, 'W':22, 'X':23, 'Y':24, 'Z':25, 'a':26, 'b':27, 'c':28, 'd':29, 'e':30, 'f':31,
+	'g':32, 'h':33, 'i':34, 'j':35, 'k':36, 'l':37, 'm':38, 'n':39, 'o':40, 'p':41, 'q':42, 'r':43, 's':44, 't':45, 'u':46, 'v':47,
+	'w':48, 'x':49, 'y':50, 'z':51, '0':52, '1':53, '2':54, '3':55, '4':56, '5':57, '6':58, '7':59, '8':60, '9':61, '+':62, '/':63}
+
+	binary = ''
+
+	for x in cipher : # convert character to binary
+		decimal = table[x]
+
+		b = bin(decimal)[2:]
+		if len(b) < 6 : # complete the sextet
+			for i in range(6 - len(b)) :
+				b = '0' + b
+		binary += b
+
+	n = len(binary)%8
+
+	for i in range(n) :
+		binary = binary[:-1] # remove the zeroes added during Base64-Padding to complete the sextet
+
+	return binary
+
 def encrypt(text, key) :
 
-	bin_bits = str_to_bin(text) # convert the text to binary sequence
-	bin_bits = pkcs5_padding(text, bin_bits) # pad the binary sequence according to PKCS5 Padding rule
+	bin_bits = str2bin(text) # convert the text to binary sequence
+	bin_bits = pkcs5_padding(bin_bits) # pad the binary sequence according to PKCS5 Padding rule
 
-	key_bits = str_to_bin(key) # convert the encryption key to binary sequence
+	key_bits = str2bin(key) # convert the encryption key to binary sequence
 	round_key_set = round_keys(key_bits) # list of 16 round keys
 
 	blocks = bit_blocks(bin_bits)
@@ -210,64 +282,61 @@ def encrypt(text, key) :
 			s_box_output = straight_perm(s_box_output) # apply straight permutation
 			
 			left_bits = xor(left_bits, s_box_output) # change left half to result of XOR between left half and changed right half
-			
-			if i != 15 :
-				left_bits, right_bits = right_bits, left_bits # swap the left and right halve's values for next encryption round
+
+			left_bits, right_bits = right_bits, left_bits # swap the left and right halve's values for next encryption round
 				
-		new_block = left_bits + right_bits
+		new_block = right_bits + left_bits # final swapping
 		new_block = final_perm(new_block)
 		
 		encrypted_bits += new_block
 		
-	return encrypted_bits
-	
-def bin2hex(binary) :
-	
-	table = {'0000':'0', '0001':'1', '0010':'2', '0011':'3', '0100':'4', '0101':'5', '0110':'6', '0111':'7',
-	         '1000':'8', '1001':'9', '1010':'A', '1011':'B', '1100':'C', '1101':'D', '1110':'E', '1111':'F'}
+	return bin2base64(encrypted_bits)
 
-	hex_bits = ''
-	for i in range(len(binary)//4) :
-		hex_bits += table[binary[i*4 : (i*4)+4]]
+def decrypt(cipher, key) :
+
+	key_bits = str2bin(key)
+
+	round_key_set = round_keys(key_bits)
+
+	bin_cipher = base642bin(cipher)
+
+	blocks = bit_blocks(bin_cipher)
+
+	decrypted_bits = ''
+
+	for block in blocks :
 		
-	return hex_bits
-
-def bin2base64(binary) :
-
-	pad_val = 3 - (len(binary)//8)%3
-
-	table = {0:'A', 1:'B', 2:'C', 3:'D', 4:'E', 5:'F', 6:'G', 7:'H', 8:'I', 9:'J', 10:'K', 11:'L', 12:'M', 13:'N', 14:'O', 15:'P',
-	         16:'Q', 17:'R', 18:'S', 19:'T', 20:'U', 21:'V', 22:'W', 23:'X', 24:'Y', 25:'Z', 26:'a', 27:'b', 28:'c', 29:'d', 30:'e', 31:'f',
-	         32:'g', 33:'h', 34:'i', 35:'j', 36:'k', 37:'l', 38:'m', 39:'n', 40:'o', 41:'p', 42:'q', 43:'r', 44:'s', 45:'t', 46:'u', 47:'v',
-	         48:'w', 49:'x', 50:'y', 51:'z', 52:'0', 53:'1', 54:'2', 55:'3', 56:'4', 57:'5', 58:'6', 59:'7', 60:'8', 61:'9', 62:'+', 63:'/'}
-
-	if (6 - len(binary)%6) != 6 :
-		for i in range(6 - len(binary)%6) :
-			binary += '0'
-
-	base64 = ''
-
-	for i in range(len(binary)//6) :
-		decimal_val = 0
-		bits = [int(x) for x in binary[i*6 : (i*6)+6]]
-		for x in range(len(bits)) :
-			decimal_val += int(bits[x]*math.pow(2, len(bits)-1-x))
+		block = init_perm(block)
+		
+		left_bits = block[:32]
+		right_bits = block[32:]
+		
+		for i in range(16) :
+		
+			expand_right = expand_perm(right_bits) # right_bits is now of 48-bits
 			
-		base64 += table[decimal_val]
+			xor_res = xor(expand_right, round_key_set[15-i]) # perform XOR operation with round_keys in reverse order
+			
+			s_box_output = s_box(xor_res) # xor_res is now of 32-bits
+			
+			s_box_output = straight_perm(s_box_output) # apply straight permutation
+			
+			left_bits = xor(left_bits, s_box_output) # change left half to result of XOR between left half and changed right half
 
-	if pad_val != 3 :
-		for i in range(pad_val) :
-			base64 += '='
+			left_bits, right_bits = right_bits, left_bits # swap the left and right halve's values for next encryption round
+				
+		new_block = right_bits + left_bits # final swapping
+		new_block = final_perm(new_block)
 
-	return base64
+		decrypted_bits += new_block
 
-text = input('Text : ')
-print('\nKey should be of 8 characters')
-while True :
-	key = input('Encryption Key : ')
-	if len(key) == 8 :
-		break
-	else :
-		continue
+	decimal = 0
 
-print('\nEncrypted Text :\n' + bin2base64(encrypt(text, key)))
+	for i in range(8) :
+		decimal += int(int(decrypted_bits[-8:][i])*math.pow(2, 7-i)) # number of bytes added during PKCS5-Padding
+	
+	decrypted_bits = decrypted_bits[:(-1*decimal*8)] # remove the padded bytes
+
+	text = bin2str(decrypted_bits) # convert the binary sequence to ascii character string
+
+	return text
