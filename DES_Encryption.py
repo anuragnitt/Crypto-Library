@@ -234,7 +234,7 @@ def bin2hex(binary) :
 
 def bin2base64(binary) :
 
-	global text
+	pad_val = 3 - (len(binary)//8)%3
 
 	table = {0:'A', 1:'B', 2:'C', 3:'D', 4:'E', 5:'F', 6:'G', 7:'H', 8:'I', 9:'J', 10:'K', 11:'L', 12:'M', 13:'N', 14:'O', 15:'P',
 	         16:'Q', 17:'R', 18:'S', 19:'T', 20:'U', 21:'V', 22:'W', 23:'X', 24:'Y', 25:'Z', 26:'a', 27:'b', 28:'c', 29:'d', 30:'e', 31:'f',
@@ -252,10 +252,9 @@ def bin2base64(binary) :
 		bits = [int(x) for x in binary[i*6 : (i*6)+6]]
 		for x in range(len(bits)) :
 			decimal_val += int(bits[x]*math.pow(2, len(bits)-1-x))
-		
+			
 		base64 += table[decimal_val]
 
-	pad_val = 3 - len(text)%3
 	if pad_val != 3 :
 		for i in range(pad_val) :
 			base64 += '='
