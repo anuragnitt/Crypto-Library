@@ -1,3 +1,5 @@
+import math
+
 # conversion of plain text to binary value using utf-8 encoding
 def str_to_bin(text) :
 
@@ -178,63 +180,95 @@ def round_keys(key_bits) :
 	
 	return round_key_set # returns the list of 16 round_keys
 	
-text = input('Text to encrypt : ')
-print('\nEncryption key should be 8 characters(any) long')
-while True :
+def encrypt(text, key) :
 
-	key = input('Encryption Key : ')
-	if len(key) == 8 :
-		break
-	else :
-		print('Encryption Key should be of 8 bytes\n')
-		continue
+	bin_bits = str_to_bin(text) # convert the text to binary sequence
+	bin_bits = pkcs5_padding(text, bin_bits) # pad the binary sequence according to PKCS5 Padding rule
 
-bin_bits = str_to_bin(text) # convert the text to binary sequence
-bin_bits = pkcs5_padding(text, bin_bits) # pad the binary sequence according to PKCS5 Padding rule
+	key_bits = str_to_bin(key) # convert the encryption key to binary sequence
+	round_key_set = round_keys(key_bits) # list of 16 round keys
 
-key_bits = str_to_bin(key) # convert the encryption key to binary sequence
-round_key_set = round_keys(key_bits) # list of 16 round keys
+	blocks = bit_blocks(bin_bits)
 
-blocks = bit_blocks(bin_bits)
+	encrypted_bits = ''
 
-encrypted_bits = ''
-
-for block in blocks :
-	
-	block = init_perm(block)
-	
-	left_bits = block[:32]
-	right_bits = block[32:]
-	
-	for i in range(16) :
-	
-		expand_right = expand_perm(right_bits) # right_bits is now of 48-bits
+	for block in blocks :
 		
-		xor_res = xor(expand_right, round_key_set[i]) # perform XOR operation
+		block = init_perm(block)
 		
-		s_box_output = s_box(xor_res) # xor_res is now of 32-bits
+		left_bits = block[:32]
+		right_bits = block[32:]
 		
-		s_box_output = straight_perm(s_box_output) # apply straight permutation
+		for i in range(16) :
 		
-		left_bits = xor(left_bits, s_box_output) # change left half to result of XOR between left half and changed right half
-		
-		if i != 15 :
-			left_bits, right_bits = right_bits, left_bits # swap the left and right halve's values for next encryption round
+			expand_right = expand_perm(right_bits) # right_bits is now of 48-bits
 			
-	new_block = left_bits + right_bits
-	new_block = final_perm(new_block)
-	
-	encrypted_bits += new_block
+			xor_res = xor(expand_right, round_key_set[i]) # perform XOR operation
+			
+			s_box_output = s_box(xor_res) # xor_res is now of 32-bits
+			
+			s_box_output = straight_perm(s_box_output) # apply straight permutation
+			
+			left_bits = xor(left_bits, s_box_output) # change left half to result of XOR between left half and changed right half
+			
+			if i != 15 :
+				left_bits, right_bits = right_bits, left_bits # swap the left and right halve's values for next encryption round
+				
+		new_block = left_bits + right_bits
+		new_block = final_perm(new_block)
+		
+		encrypted_bits += new_block
+		
+	return encrypted_bits
 	
 def bin2hex(binary) :
 	
 	table = {'0000':'0', '0001':'1', '0010':'2', '0011':'3', '0100':'4', '0101':'5', '0110':'6', '0111':'7',
 	         '1000':'8', '1001':'9', '1010':'A', '1011':'B', '1100':'C', '1101':'D', '1110':'E', '1111':'F'}
 
-	return table[binary]
+	hex_bits = ''
+	for i in range(len(binary)//4) :
+		hex_bits += table[binary[i*4 : (i*4)+4]]
+		
+	return hex_bits
 
-hex_bits = ''
-for i in range(len(encrypted_bits)//4) :
-	hex_bits += bin2hex((encrypted_bits[i*4 : (i*4)+4]))
-	
-print('\nHexadecimal Cipher : ' + hex_bits)
+def bin2base64(binary) :
+
+	global text
+
+	table = {0:'A', 1:'B', 2:'C', 3:'D', 4:'E', 5:'F', 6:'G', 7:'H', 8:'I', 9:'J', 10:'K', 11:'L', 12:'M', 13:'N', 14:'O', 15:'P',
+	         16:'Q', 17:'R', 18:'S', 19:'T', 20:'U', 21:'V', 22:'W', 23:'X', 24:'Y', 25:'Z', 26:'a', 27:'b', 28:'c', 29:'d', 30:'e', 31:'f',
+	         32:'g', 33:'h', 34:'i', 35:'j', 36:'k', 37:'l', 38:'m', 39:'n', 40:'o', 41:'p', 42:'q', 43:'r', 44:'s', 45:'t', 46:'u', 47:'v',
+	         48:'w', 49:'x', 50:'y', 51:'z', 52:'0', 53:'1', 54:'2', 55:'3', 56:'4', 57:'5', 58:'6', 59:'7', 60:'8', 61:'9', 62:'+', 63:'/'}
+
+	if (6 - len(binary)%6) != 6 :
+		for i in range(6 - len(binary)%6) :
+			binary += '0'
+
+	base64 = ''
+
+	for i in range(len(binary)//6) :
+		decimal_val = 0
+		bits = [int(x) for x in binary[i*6 : (i*6)+6]]
+		for x in range(len(bits)) :
+			decimal_val += int(bits[x]*math.pow(2, len(bits)-1-x))
+		
+		base64 += table[decimal_val]
+
+	pad_val = 3 - len(text)%3
+	if pad_val != 3 :
+		for i in range(pad_val) :
+			base64 += '='
+
+	return base64
+
+text = input('Text : ')
+print('\nKey should be of 8 characters')
+while True :
+	key = input('Encryption Key : ')
+	if len(key) == 8 :
+		break
+	else :
+		continue
+
+print('\nEncrypted Text :\n' + bin2base64(encrypt(text, key)))
