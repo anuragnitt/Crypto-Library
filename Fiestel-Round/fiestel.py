@@ -8,6 +8,7 @@ def unpad(pt : bytes) -> bytes:
     return pt[:(len(pt) - pt[-1])]
 
 def xor(a : bytes, b : bytes) -> bytes:
+    assert len(a) == len(b)
     return bytes([a[i]^b[i] for i in range(len(a))])
 
 def expand(data : bytes) -> bytes:
@@ -87,24 +88,35 @@ def straighten(data : str) -> bytes:
 def fiestel(right : bytes, key : bytes) -> bytes:
     return straighten(s_box(xor(key, expand(right))))
 
+def encrypt_block(block : bytes, key : bytes) -> bytes:
+    left = block[:4]
+    right = block[4:]
+    left = xor(left, fiestel(right, key))
+    return right + left
+
 def encrypt(pt : bytes, key : bytes) -> bytes:
     pt = pad(pt)
     blocks = [pt[i:i+8] for i in range(0, len(pt), 8)]
-    cipher = b''
+    cipher = []
     for block in blocks:
-        left = block[:4]
-        right = block[4:]
-        left = xor(left, fiestel(right, key))
-        cipher += right + left
-    return cipher
+        if cipher:
+            block = xor(block, cipher[-1])
+        cipher.append(encrypt_block(block, key))
+    return b''.join(cipher)
+
+def decrypt_block(block : bytes, key : bytes) -> bytes:
+    block = encrypt_block(block[4:] + block[:4], key)
+    return block[4:] + block[:4]
 
 def decrypt(ct : bytes, key : bytes) -> bytes:
     blocks = [ct[i:i+8] for i in range(0, len(ct), 8)]
-    cipher = b''.join([block[4:] + block[:4] for block in blocks])
-    cipher = encrypt(cipher, key)
-    blocks = [cipher[i:i+8] for i in range(0, len(ct), 8)]
-    plain = b''.join([block[4:] + block[:4] for block in blocks])
-    return unpad(plain)
+    plain = []
+    for i in range(len(blocks)):
+        block = decrypt_block(blocks[i], key)
+        if i:
+            block = xor(block, blocks[i-1])
+        plain.append(block)
+    return unpad(b''.join(plain))
 
 def main(message : str) -> bool:
     pt = message.encode()
